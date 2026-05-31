@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenMail - OTP Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3248;
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e8eaf6;
+    --muted: #8b90a8;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+  }
+  .logo { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); letter-spacing: -0.5px; }
+  .logo span { color: var(--text); }
+  .tagline { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1rem; }
+
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .input-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .input-row { display: flex; gap: 10px; }
+  .email-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .2s;
+  }
+  .email-input:focus { border-color: var(--accent); }
+  .email-input::placeholder { color: var(--muted); }
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: .88; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 12px; padding: 6px 12px; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .settings-label { font-size: 12px; color: var(--muted); }
+  .interval-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: var(--text);
+    font-family: var(--sans);
+    outline: none;
+    cursor: pointer;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-bar { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .status-bar.error { color: var(--red); }
+  .status-bar.success { color: var(--green); }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .toolbar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .inbox-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .badge { background: var(--accent2); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .timer-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--yellow);
+    background: rgba(245,158,11,.1);
+    border: 1px solid rgba(245,158,11,.25);
+    border-radius: 999px;
+    padding: 3px 10px;
+    display: none;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; display: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  .otp-banner {
+    background: linear-gradient(135deg, rgba(79,142,247,.12), rgba(124,92,252,.12));
+    border: 1px solid rgba(79,142,247,.3);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: none;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .otp-banner.show { display: flex; }
+  .otp-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .otp-code { font-family: var(--mono); font-size: 32px; font-weight: 600; color: var(--accent); letter-spacing: 6px; }
+  .otp-from { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .copy-otp {
+    margin-left: auto;
+    background: rgba(79,142,247,.15);
+    border: 1px solid rgba(79,142,247,.3);
+    color: var(--accent);
+    border-radius: 7px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    font-family: var(--sans);
+  }
+  .copy-otp:hover { background: rgba(79,142,247,.25); }
+
+  .inbox-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .empty-state { padding: 3.5rem 1rem; text-align: center; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: .75rem; opacity: .35; }
+  .empty-state p { font-size: 14px; }
+  .empty-state small { font-size: 12px; color: var(--border); }
+
+  .mail-item {
+    padding: 14px 1.25rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .15s;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .mail-item:last-child { border-bottom: none; }
+  .mail-item:hover { background: var(--surface2); }
+  .mail-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .mail-icon.has-otp { background: rgba(79,142,247,.1); border-color: rgba(79,142,247,.3); }
+  .mail-content { flex: 1; min-width: 0; }
+  .mail-from { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .mail-subject { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+  .mail-snippet { font-size: 11px; color: var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-right { text-align: right; flex-shrink: 0; }
+  .mail-time { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .otp-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(79,142,247,.12);
+    color: var(--accent);
+    border: 1px solid rgba(79,142,247,.25);
+    border-radius: 6px;
+    padding: 2px 8px;
+    display: inline-block;
+  }
+
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 999; padding: 1rem; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    max-width: 600px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; gap: 12px; }
+  .modal-subject { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  .close-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 7px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .close-btn:hover { color: var(--text); }
+  .modal-meta { font-size: 12px; color: var(--muted); margin-bottom: 1rem; line-height: 1.7; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+  .modal-otp {
+    background: rgba(79,142,247,.08);
+    border: 1px solid rgba(79,142,247,.2);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .modal-otp-code { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--accent); letter-spacing: 5px; }
+  .modal-body {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--mono);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 999px;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  .copied-toast.show { opacity: 1; }
+
+  @media (max-width: 480px) {
+    .input-row { flex-direction: column; }
+    .otp-code { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">gen<span>mail</span></div>
+  <div class="tagline">OTP Reader · Catch-All Domain</div>
+</header>
+
+<div class="container">
+
+  <div class="input-card">
+    <div class="input-label">Masukkan Alamat Email</div>
+    <div class="input-row">
+      <input class="email-input" id="emailInput" type="email" placeholder="nama@domainkamu.com" autocomplete="off" spellcheck="false">
+      <button class="btn btn-primary" onclick="startCheck()">Cek Email</button>
+      <button class="btn btn-secondary" onclick="stopCheck()" id="btnStop" style="display:none">Stop</button>
+    </div>
+    <div class="settings-row">
+      <span class="settings-label">Auto refresh setiap:</span>
+      <select class="interval-select" id="intervalSelect">
+        <option value="10">10 detik</option>
+        <option value="15" selected>15 detik</option>
+        <option value="30">30 detik</option>
+        <option value="60">1 menit</option>
+      </select>
+      <div class="spinner" id="spinner"></div>
+      <div class="status-bar" id="statusBar"></div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="inbox-title">Inbox</span>
+      <span class="badge" id="countBadge" style="display:none">0</span>
+      <div class="dot" id="activeDot"></div>
+    </div>
+    <div class="timer-pill" id="timerPill">🔄 <span id="timerText">15</span>d</div>
+    <button class="btn btn-ghost" onclick="refreshNow()" id="btnRefresh" style="display:none">↻ Refresh</button>
+  </div>
+
+  <div class="otp-banner" id="otpBanner">
+    <div>
+      <div class="otp-label">OTP Terbaru</div>
+      <div class="otp-code" id="otpCode">------</div>
+      <div class="otp-from" id="otpFrom"></div>
+    </div>
+    <button class="copy-otp" onclick="copyOTP()">Salin OTP</button>
+  </div>
+
+  <div class="inbox-wrap" id="inboxWrap">
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>Belum ada email</p>
+      <small>Masukkan alamat email lalu klik Cek Email</small>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-subject" id="modalSubject"></div>
+      <div class="close-btn" onclick="closeModal()">✕</div>
+    </div>
+    <div class="modal-meta" id="modalMeta"></div>
+    <div class="modal-otp" id="modalOtpBox" style="display:none">
+      <div>
+        <div class="otp-label">Kode OTP</div>
+        <div class="modal-otp-code" id="modalOtpCode"></div>
+      </div>
+      <button class="copy-otp" onclick="copyText(document.getElementById('modalOtpCode').textContent)">Salin</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="copied-toast" id="toast">✓ Disalin!</div>
+
+<script>
+// ==========================================================
+// GANTI URL INI DENGAN URL GOOGLE APPS SCRIPT KAMU
+// ==========================================================
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxE-beXWzA0T5CA5COJ4NndEk7PaoQml8nipe06wHcgxJkkEGnAie5hsDOfKJ_usEqDFw/exec';
+// ==========================================================
+
+let checkInterval = null;
+let emails = [];
+let currentEmail = '';
+let countdown = 15;
+let countdownTimer = null;
+
+function startCheck() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email || !email.includes('@')) { setStatus('Masukkan alamat email yang valid', 'error'); return; }
+  currentEmail = email;
+  stopCheck();
+  document.getElementById('btnStop').style.display = '';
+  document.getElementById('btnRefresh').style.display = '';
+  document.getElementById('activeDot').style.display = '';
+  document.getElementById('timerPill').style.display = '';
+  const intervalSec = parseInt(document.getElementById('intervalSelect').value);
+  countdown = intervalSec;
+  fetchInbox();
+  startCountdown(intervalSec);
+  checkInterval = setInterval(() => { fetchInbox(); startCountdown(intervalSec); }, intervalSec * 1000);
+}
+
+function stopCheck() {
+  clearInterval(checkInterval);
+  clearInterval(countdownTimer);
+  checkInterval = null;
+  document.getElementById('btnStop').style.display = 'none';
+  document.getElementById('activeDot').style.display = 'none';
+  document.getElementById('timerPill').style.display = 'none';
+}
+
+function startCountdown(sec) {
+  clearInterval(countdownTimer);
+  countdown = sec;
+  document.getElementById('timerText').textContent = countdown;
+  countdownTimer = setInterval(() => {
+    countdown--;
+    document.getElementById('timerText').textContent = countdown;
+    if (countdown <= 0) clearInterval(countdownTimer);
+  }, 1000);
+}
+
+function refreshNow() {
+  fetchInbox();
+  startCountdown(parseInt(document.getElementById('intervalSelect').value));
+}
+
+async function fetchInbox() {
+  if (!currentEmail) return;
+  showSpinner(true);
+  setStatus('Mengambil email...', '');
+  try {
+    const url = APPS_SCRIPT_URL + '?action=inbox&email=' + encodeURIComponent(currentEmail);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) {
+      setStatus('Error: ' + data.error, 'error');
+    } else {
+      emails = data.emails || [];
+      renderInbox();
+      updateOTPBanner();
+      setStatus('Diperbarui ' + new Date().toLocaleTimeString('id-ID'), 'success');
+    }
+  } catch (e) {
+    setStatus('Gagal terhubung. Periksa URL Apps Script.', 'error');
+  }
+  showSpinner(false);
+}
+
+async function openEmail(id) {
+  const local = emails.find(e => e.id === id);
+  if (!local) return;
+  document.getElementById('modalSubject').textContent = local.subject;
+  document.getElementById('modalMeta').innerHTML = '<b>Dari:</b> ' + esc(local.from) + '<br><b>Waktu:</b> ' + formatDate(local.date);
+  document.getElementById('modalBody').textContent = local.snippet || '(memuat...)';
+  if (local.otp) {
+    document.getElementById('modalOtpCode').textContent = local.otp;
+    document.getElementById('modalOtpBox').style.display = 'flex';
+  } else {
+    document.getElementById('modalOtpBox').style.display = 'none';
+  }
+  document.getElementById('modalBg').classList.add('open');
+  try {
+    const url = APPS_SCRIPT_URL + '?action=read&email=' + encodeURIComponent(currentEmail) + '&id=' + id;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.body) {
+      document.getElementById('modalBody').textContent = data.body;
+      if (data.otp) {
+        document.getElementById('modalOtpCode').textContent = data.otp;
+        document.getElementById('modalOtpBox').style.display = 'flex';
+      }
+    }
+  } catch(e) {}
+}
+
+function renderInbox() {
+  const wrap = document.getElementById('inboxWrap');
+  const badge = document.getElementById('countBadge');
+  if (!emails.length) {
+    badge.style.display = 'none';
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Belum ada email masuk</p><small>Email akan muncul secara otomatis</small></div>';
+    return;
+  }
+  badge.style.display = '';
+  badge.textContent = emails.length;
+  wrap.innerHTML = emails.map(m => `
+    <div class="mail-item" onclick="openEmail('${m.id}')">
+      <div class="mail-icon ${m.otp ? 'has-otp' : ''}">${m.otp ? '🔑' : '✉️'}</div>
+      <div class="mail-content">
+        <div class="mail-from">${esc(m.from)}</div>
+        <div class="mail-subject">${esc(m.subject)}</div>
+        <div class="mail-snippet">${esc(m.snippet)}</div>
+      </div>
+      <div class="mail-right">
+        <div class="mail-time">${formatDate(m.date)}</div>
+        ${m.otp ? `<span class="otp-pill">${m.otp}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateOTPBanner() {
+  const withOTP = emails.find(m => m.otp);
+  const banner = document.getElementById('otpBanner');
+  if (withOTP) {
+    document.getElementById('otpCode').textContent = withOTP.otp;
+    document.getElementById('otpFrom').textContent = 'dari ' + withOTP.from;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+function copyOTP() { copyText(document.getElementById('otpCode').textContent); }
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  });
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalBg')) document.getElementById('modalBg').classList.remove('open');
+}
+
+function showSpinner(show) { document.getElementById('spinner').style.display = show ? 'block' : 'none'; }
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  el.className = 'status-bar' + (type ? ' ' + type : '');
+}
+
+function formatDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const diff = Date.now() - d;
+  if (diff < 60000) return 'baru saja';
+  if (diff < 3600000) return Math.floor(diff/60000) + ' menit lalu';
+  if (diff < 86400000) return d.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+  return d.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
+}
+
+function esc(t) {
+  if (!t) return '';
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('emailInput').addEventListener('keydown', e => { if (e.key === 'Enter') startCheck(); });
+</script>
+</body>
+</html>
